@@ -12,6 +12,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.expensetracker.patterns.FirebaseManager; // ✅ Added import for Singleton
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
@@ -23,7 +24,7 @@ public class LoginActivity extends AppCompatActivity {
     private Button btnLogin;
     private TextView tvRegister;
 
-    private FirebaseAuth mAuth;
+    private FirebaseAuth mAuth; // ✅ Still used but initialized via FirebaseManager
     private ProgressDialog progressDialog;
 
     @Override
@@ -31,15 +32,15 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         try {
-            // Initialize Firebase Auth first
-            mAuth = FirebaseAuth.getInstance();
-            Log.d(TAG, "Firebase Auth initialized successfully");
+//            mAuth = FirebaseAuth.getInstance();
+            // ✅ CHANGE 1: Initialize Firebase using Singleton (instead of FirebaseAuth.getInstance)
+            mAuth = FirebaseManager.getInstance().getAuth();
+            Log.d(TAG, "Firebase Auth initialized via FirebaseManager successfully");
 
             // Check if user is already logged in
             FirebaseUser currentUser = mAuth.getCurrentUser();
             if (currentUser != null) {
                 Log.d(TAG, "User already logged in: " + currentUser.getEmail());
-                // User is already logged in, so skip login screen
                 navigateToMainActivity();
                 return;
             }
@@ -91,7 +92,7 @@ public class LoginActivity extends AppCompatActivity {
                 try {
                     Intent intent = new Intent(this, RegisterActivity.class);
                     startActivity(intent);
-                    finish(); // Close login activity to prevent going back
+                    finish();
                 } catch (Exception e) {
                     Log.e(TAG, "Error navigating to register: " + e.getMessage(), e);
                     Toast.makeText(this, "Error opening registration", Toast.LENGTH_SHORT).show();
@@ -106,7 +107,6 @@ public class LoginActivity extends AppCompatActivity {
 
     private void handleRegistrationSuccess() {
         try {
-            // Check if coming from successful registration
             Intent intent = getIntent();
             if (intent != null && intent.getBooleanExtra("registration_success", false)) {
                 String userEmail = intent.getStringExtra("user_email");
@@ -135,6 +135,7 @@ public class LoginActivity extends AppCompatActivity {
                 progressDialog.show();
             }
 
+            // ✅ CHANGE 2: use mAuth initialized via Singleton
             mAuth.signInWithEmailAndPassword(email, password)
                     .addOnCompleteListener(task -> {
                         try {
@@ -144,7 +145,7 @@ public class LoginActivity extends AppCompatActivity {
 
                             if (task.isSuccessful()) {
                                 Log.d(TAG, "Login successful");
-                                // Successfully logged in, redirect to main screen
+
                                 FirebaseUser user = mAuth.getCurrentUser();
                                 if (user != null) {
                                     Log.d(TAG, "User ID: " + user.getUid());
@@ -156,7 +157,6 @@ public class LoginActivity extends AppCompatActivity {
                                 navigateToMainActivity();
                             } else {
                                 Log.e(TAG, "Login failed", task.getException());
-                                // Login failed
                                 handleLoginError(task.getException());
                             }
                         } catch (Exception e) {
@@ -200,11 +200,9 @@ public class LoginActivity extends AppCompatActivity {
 
     private boolean validateInput(String email, String password) {
         try {
-            // Clear previous errors
             etUsername.setError(null);
             etPassword.setError(null);
 
-            // Validate email
             if (email.isEmpty()) {
                 etUsername.setError("Please enter email");
                 etUsername.requestFocus();
@@ -217,7 +215,6 @@ public class LoginActivity extends AppCompatActivity {
                 return false;
             }
 
-            // Validate password
             if (password.isEmpty()) {
                 etPassword.setError("Please enter password");
                 etPassword.requestFocus();
@@ -253,12 +250,11 @@ public class LoginActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         try {
-            // Check if the user is already signed in
+            // ✅ CHANGE 3: use mAuth from FirebaseManager here too
             if (mAuth != null) {
                 FirebaseUser currentUser = mAuth.getCurrentUser();
                 if (currentUser != null) {
                     Log.d(TAG, "User already signed in on start");
-                    // User is already signed in, so skip login screen
                     navigateToMainActivity();
                 }
             }
@@ -271,7 +267,6 @@ public class LoginActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         try {
-            // Clear password field for security when returning to login
             if (etPassword != null) {
                 etPassword.setText("");
             }
