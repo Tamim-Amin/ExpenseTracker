@@ -1,4 +1,4 @@
-//Singleton Pattern
+//SingleTon
 package com.example.expensetracker.patterns;
 
 import com.google.firebase.auth.FirebaseAuth;
@@ -6,8 +6,8 @@ import com.google.firebase.database.FirebaseDatabase;
 
 public class FirebaseManager {
     private static FirebaseManager instance;
-    private FirebaseAuth auth;
-    private FirebaseDatabase database;
+    private final FirebaseAuth auth;
+    private final FirebaseDatabase database;
 
     private FirebaseManager() {
         auth = FirebaseAuth.getInstance();
@@ -21,6 +21,11 @@ public class FirebaseManager {
         return instance;
     }
 
-    public FirebaseAuth getAuth() { return auth; }
-    public FirebaseDatabase getDatabase() { return database; }
+    public FirebaseAuth getAuth() {
+        return auth;
+    }
+
+    public FirebaseDatabase getDatabase() {
+        return database;
+    }
 }
