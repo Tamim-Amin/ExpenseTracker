@@ -2,6 +2,7 @@ package com.example.expensetracker;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -12,12 +13,17 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.expensetracker.patterns.ExpenseComponent;
+import com.example.expensetracker.patterns.ExpenseGroup;
+import com.example.expensetracker.patterns.SingleExpense;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.*;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -96,6 +102,10 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 updateTotalExpenses();
+
+                // Call the Composite Pattern demo method
+                demonstrateCompositePattern();
+
             } else {
                 Toast.makeText(this, "Failed to load expenses", Toast.LENGTH_SHORT).show();
             }
@@ -295,6 +305,84 @@ public class MainActivity extends AppCompatActivity {
             case "healthcare": return 0xFFEC4899;
             case "education": return 0xFF06B6D4;
             default: return 0xFF6B7280;
+        }
+    }
+
+    //COMPOSITE PATTERN
+
+    private void demonstrateCompositePattern() {
+        Log.d("CompositeDemo", "--- Demonstrating Composite Pattern ---");
+
+        if (expenseList.isEmpty()) {
+            Log.d("CompositeDemo", "No expenses to group.");
+            return;
+        }
+
+        // Create the root Composite node
+        ExpenseComponent allExpensesGroup = new ExpenseGroup("Total Expenses");
+
+        // Use a Map to hold category Composites
+        Map<String, ExpenseGroup> categoryGroups = new HashMap<>();
+
+        // Iterate over the flat list and build the tree
+        for (ExpenseItem item : expenseList) {
+            String category = item.expense.category;
+
+            // Get or create the composite group for this category
+            ExpenseGroup categoryGroup = categoryGroups.get(category);
+            if (categoryGroup == null) {
+                categoryGroup = new ExpenseGroup(category);
+                categoryGroups.put(category, categoryGroup);
+
+                // Add the new category group to the root
+                allExpensesGroup.add(categoryGroup);
+            }
+
+            // Create the Leaf node for the single expense
+            ExpenseComponent singleExpenseLeaf = new SingleExpense(item.expense);
+
+            //  Add the Leaf to its category Composite
+            categoryGroup.add(singleExpenseLeaf);
+        }
+
+        // Now, we can treat groups and leaves uniformly.
+        // We can call getAmount() on ANY component.
+
+        Log.d("CompositeDemo", "--- Calculating Totals ---");
+
+        // Calculate total for a specific category (a Composite)
+        ExpenseGroup foodGroup = categoryGroups.get("Food");
+        if (foodGroup != null) {
+            // Note: We call foodGroup.getAmount()
+            Log.d("CompositeDemo", "Total for " + foodGroup.getTitle() + ": $" + foodGroup.getAmount());
+        }
+
+        // Calculate total for ALL expenses (the root Composite)
+        // Note: We call allExpensesGroup.getAmount()
+        // This is the power of the pattern: the *same method* works
+        // on a single group or the entire tree.
+        Log.d("CompositeDemo", "GRAND TOTAL (" + allExpensesGroup.getTitle() + "): $" + allExpensesGroup.getAmount());
+        Log.d("CompositeDemo", "------------------------------------------");
+
+        // We can also build a function to recursively print the tree
+        Log.d("CompositeTree", "--- Expense Tree Structure ---");
+        printExpenseTree(allExpensesGroup, 0);
+    }
+    private void printExpenseTree(ExpenseComponent component, int indentLevel) {
+        StringBuilder indent = new StringBuilder();
+        for (int i = 0; i < indentLevel; i++) {
+            indent.append("  ");
+        }
+
+        if (component.isComposite()) {
+            // It's a Composite (ExpenseGroup)
+            Log.d("CompositeTree", indent.toString() + "GROUP: " + component.getTitle() + " (Subtotal: $" + component.getAmount() + ")");
+            for (ExpenseComponent child : component.getChildren()) {
+                printExpenseTree(child, indentLevel + 1);
+            }
+        } else {
+            // It's a Leaf (SingleExpense)
+            Log.d("CompositeTree", indent.toString() + "- LEAF: " + component.getTitle() + " ($" + component.getAmount() + ")");
         }
     }
 
