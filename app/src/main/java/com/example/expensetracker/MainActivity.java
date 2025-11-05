@@ -13,9 +13,13 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.expensetracker.patterns.CategoryExpenseStrategy;
+import com.example.expensetracker.patterns.DailyExpenseStrategy;
+import com.example.expensetracker.patterns.ExpenseCalculatorContext;
 import com.example.expensetracker.patterns.ExpenseComponent;
 import com.example.expensetracker.patterns.ExpenseGroup;
 import com.example.expensetracker.patterns.SingleExpense;
+import com.example.expensetracker.patterns.TotalExpenseStrategy;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.*;
@@ -384,6 +388,36 @@ public class MainActivity extends AppCompatActivity {
             // It's a Leaf (SingleExpense)
             Log.d("CompositeTree", indent.toString() + "- LEAF: " + component.getTitle() + " ($" + component.getAmount() + ")");
         }
+    }
+
+
+    // Example usage of Strategy Pattern
+    private void applyStrategyExample() {
+        ExpenseCalculatorContext context = new ExpenseCalculatorContext();
+
+        // 1. Total of ALL expenses
+        context.setStrategy(new TotalExpenseStrategy());
+        double totalAll = context.executeStrategy(getExpenseList());
+        Log.d("StrategyPattern", "Total All Expenses: $" + totalAll);
+
+        // 2. Total of only FOOD category
+        context.setStrategy(new CategoryExpenseStrategy("Food"));
+        double totalFood = context.executeStrategy(getExpenseList());
+        Log.d("StrategyPattern", "Total Food Expenses: $" + totalFood);
+
+        // 3. Total of today
+        context.setStrategy(new DailyExpenseStrategy("2025-11-06")); // Example
+        double totalToday = context.executeStrategy(getExpenseList());
+        Log.d("StrategyPattern", "Total Today Expenses: $" + totalToday);
+    }
+
+    // Convert ExpenseItem list to Expense list
+    private List<Expense> getExpenseList() {
+        List<Expense> expenses = new ArrayList<>();
+        for (ExpenseItem item : expenseList) {
+            expenses.add(item.expense);
+        }
+        return expenses;
     }
 
 
