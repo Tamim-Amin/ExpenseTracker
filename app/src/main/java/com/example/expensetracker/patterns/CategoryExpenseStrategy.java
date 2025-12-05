@@ -15,8 +15,8 @@ public class CategoryExpenseStrategy implements ExpenseCalculationStrategy {
     public double calculate(List<MainActivity.Expense> expenses) {
         double total = 0;
         for (MainActivity.Expense expense : expenses) {
-            if (expense.category.equalsIgnoreCase(category)) {
-                total += expense.amount;
+            if (expense.getCategory().equalsIgnoreCase(category)) {
+                total += expense.getAmount();
             }
         }
         return total;

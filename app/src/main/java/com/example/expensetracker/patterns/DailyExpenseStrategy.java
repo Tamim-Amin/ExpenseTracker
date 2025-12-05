@@ -15,8 +15,8 @@ public class DailyExpenseStrategy implements ExpenseCalculationStrategy {
     public double calculate(List<MainActivity.Expense> expenses) {
         double total = 0;
         for (MainActivity.Expense expense : expenses) {
-            if (expense.date.equals(date)) {
-                total += expense.amount;
+            if (expense.getDate().equals(date)) {
+                total += expense.getAmount();
             }
         }
         return total;

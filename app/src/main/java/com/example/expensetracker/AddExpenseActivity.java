@@ -1,9 +1,11 @@
+// Path: app/src/main/java/com/example/expensetracker/AddExpenseActivity.java
 package com.example.expensetracker;
 
 import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -14,22 +16,28 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.expensetracker.patterns.ExpenseMemento; // Import the Memento class
+
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Locale;
 
 public class AddExpenseActivity extends AppCompatActivity {
-    // Will be true if we are editing an existing expense
-    private boolean isEditMode = false;
-    // Will hold the ID of the expense being edited
-    private String expenseId = null;
 
+    // UI Components
     private EditText etDescription, etAmount;
     private Spinner spinnerCategory;
-    private TextView tvSelectedDate;
-    private Button btnSave, btnCancel;
+    private TextView tvSelectedDate, tvTitle;
+    private Button btnSave, btnCancel, btnUndo;
 
+    // State variables
+    private boolean isEditMode = false;
+    private String expenseId = null;
     private final Calendar calendar = Calendar.getInstance();
+
+    // --- Memento Pattern: The Caretaker ---
+    // This variable holds the saved state (the memento) for the undo feature.
+    private ExpenseMemento savedStateMemento;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -43,53 +51,87 @@ public class AddExpenseActivity extends AppCompatActivity {
         tvSelectedDate = findViewById(R.id.tv_selected_date);
         btnSave = findViewById(R.id.btn_save);
         btnCancel = findViewById(R.id.btn_cancel);
-        TextView tvTitle = findViewById(R.id.tv_title); // Title of the screen
+        btnUndo = findViewById(R.id.btn_undo);
+        tvTitle = findViewById(R.id.tv_title);
 
         setupCategorySpinner();
 
-        // --- Check for Edit Mode ---
+        // Check if we are in "Edit Mode"
         Intent intent = getIntent();
         isEditMode = intent.getBooleanExtra("isEditMode", false);
 
         if (isEditMode) {
-            // If we are in edit mode, change the title and pre-fill the form
-            tvTitle.setText("Edit Expense"); // Change the title
+            // --- EDIT MODE ---
+            tvTitle.setText("Edit Expense");
+            btnUndo.setVisibility(View.VISIBLE); // Show the "Undo Changes" button
+
             expenseId = intent.getStringExtra("expenseId");
 
-            // Retrieve and set the existing data
-            String description = intent.getStringExtra("description");
-            double amount = intent.getDoubleExtra("amount", 0);
-            String category = intent.getStringExtra("category");
-            String date = intent.getStringExtra("date");
+            // Create an object with the initial state passed from MainActivity
+            MainActivity.Expense initialState = new MainActivity.Expense(
+                    intent.getStringExtra("description"),
+                    intent.getDoubleExtra("amount", 0),
+                    intent.getStringExtra("category"),
+                    intent.getStringExtra("date")
+            );
 
-            etDescription.setText(description);
-            etAmount.setText(String.valueOf(amount));
-            tvSelectedDate.setText(date);
+            // --- Memento: Originator's Action ---
+            // SAVE the initial state to a memento for the undo feature.
+            saveStateToMemento(initialState);
 
-            // Set the spinner to the correct category
-            ArrayAdapter<String> adapter = (ArrayAdapter<String>) spinnerCategory.getAdapter();
-            int position = adapter.getPosition(category);
-            spinnerCategory.setSelection(position);
+            // Pre-fill the form with the initial state
+            restoreFormFromState(initialState);
 
         } else {
-            // If we are in add mode, set a default date
+            // --- ADD MODE ---
             tvTitle.setText("Add New Expense");
-            updateDateLabel();
+            updateDateLabel(); // Set a default date for a new expense
         }
 
         // --- Setup Listeners ---
         tvSelectedDate.setOnClickListener(v -> showDatePickerDialog());
         btnSave.setOnClickListener(v -> saveExpense());
         btnCancel.setOnClickListener(v -> finish()); // Go back without saving
+
+        // --- Memento: Caretaker's Action ---
+        // Use the memento to RESTORE the state if the user clicks Undo.
+        btnUndo.setOnClickListener(v -> {
+            if (savedStateMemento != null) {
+                // The Originator's action: RESTORE its state from the memento
+                restoreFormFromState(savedStateMemento.getSavedState());
+                Toast.makeText(this, "Changes have been undone", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
+    // This method is the "createMemento" part of the pattern.
+    private void saveStateToMemento(MainActivity.Expense expense) {
+        // The Caretaker (this activity) saves the memento.
+        this.savedStateMemento = new ExpenseMemento(expense);
+    }
+
+    // This method is the "setMemento" part of the pattern.
+    private void restoreFormFromState(MainActivity.Expense expenseState) {
+        if (expenseState == null) return;
+
+        // Use public getter methods instead of direct private field access
+        etDescription.setText(expenseState.getDescription());
+        etAmount.setText(String.valueOf(expenseState.getAmount()));
+        tvSelectedDate.setText(expenseState.getDate());
+
+        // Set the spinner to the correct category
+        ArrayAdapter<String> adapter = (ArrayAdapter<String>) spinnerCategory.getAdapter();
+        if (adapter != null) {
+            int position = adapter.getPosition(expenseState.getCategory());
+            spinnerCategory.setSelection(position);
+        }
+    }
+
+    // --- Other methods (setupCategorySpinner, saveExpense, etc.) remain the same ---
     private void setupCategorySpinner() {
-        // Create an ArrayAdapter using the string array and a default spinner layout
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
                 R.array.expense_categories, android.R.layout.simple_spinner_item);
-        // Specify the layout to use when the list of choices appears
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        // Apply the adapter to the spinner
         spinnerCategory.setAdapter(adapter);
     }
 
@@ -114,7 +156,6 @@ public class AddExpenseActivity extends AppCompatActivity {
         String category = spinnerCategory.getSelectedItem().toString();
         String date = tvSelectedDate.getText().toString();
 
-        // Validation
         if (TextUtils.isEmpty(description)) {
             etDescription.setError("Description is required");
             return;
@@ -132,19 +173,17 @@ public class AddExpenseActivity extends AppCompatActivity {
             return;
         }
 
-        // Prepare the result intent to send back to MainActivity
         Intent resultIntent = new Intent();
         resultIntent.putExtra("description", description);
         resultIntent.putExtra("amount", amount);
         resultIntent.putExtra("category", category);
         resultIntent.putExtra("date", date);
 
-        // If we were editing, we must also pass back the original expense ID
         if (isEditMode) {
             resultIntent.putExtra("expenseId", expenseId);
         }
 
         setResult(RESULT_OK, resultIntent);
-        finish(); // Close this activity and return to MainActivity
+        finish();
     }
 }
