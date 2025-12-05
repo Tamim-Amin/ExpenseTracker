@@ -4,7 +4,7 @@ import java.util.Collections;
 import java.util.List;
 
 public interface ExpenseComponent {
-
+    
     String getTitle();
     double getAmount();
     boolean isComposite();
