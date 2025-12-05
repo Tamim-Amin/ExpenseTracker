@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -43,9 +44,7 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout expenseListContainer;
 
     private FirebaseAuth mAuth;
-    private FirebaseUser currentUser;
     private DatabaseReference expenseDbRef;
-    private String userId;
 
     private final List<ExpenseItem> expenseList = new ArrayList<>();
 
@@ -54,14 +53,14 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         mAuth = FirebaseAuth.getInstance();
-        currentUser = mAuth.getCurrentUser();
+        FirebaseUser currentUser = mAuth.getCurrentUser();
 
         if (currentUser == null) {
             navigateToLogin();
             return;
         }
 
-        userId = currentUser.getUid();
+        String userId = currentUser.getUid();
         expenseDbRef = FirebaseDatabase.getInstance().getReference("expenses").child(userId);
 
         setContentView(R.layout.activity_main);
@@ -135,16 +134,17 @@ public class MainActivity extends AppCompatActivity {
                 expenseListContainer.removeAllViews();
                 double currentTotal = 0.0;
 
-                for (DataSnapshot snapshot : task.getResult().getChildren()) {
+                for (DataSnapshot snapshot : Objects.requireNonNull(task.getResult()).getChildren()) {
                     Expense expense = snapshot.getValue(Expense.class);
                     String expenseId = snapshot.getKey();
                     if (expense != null && expenseId != null) {
                         addExpenseToUI(expense, expenseId);
-                        currentTotal += expense.amount;
+                        currentTotal += expense.getAmount();
                     }
                 }
                 tvTotal.setText(String.format("$%.2f", currentTotal));
                 demonstrateCompositePattern();
+                applyStrategyExample(); // Call strategy example after loading
             } else {
                 Toast.makeText(this, "Failed to load expenses", Toast.LENGTH_SHORT).show();
             }
@@ -159,27 +159,26 @@ public class MainActivity extends AppCompatActivity {
         TextView tvDate = view.findViewById(R.id.tv_date);
         TextView tvAmount = view.findViewById(R.id.tv_amount);
         Button btnDelete = view.findViewById(R.id.btn_delete);
-        Button btnEdit = view.findViewById(R.id.btn_edit); // Find the edit button
+        Button btnEdit = view.findViewById(R.id.btn_edit);
 
-        tvDescription.setText(expense.description);
-        tvCategory.setText(expense.category);
-        tvDate.setText(expense.date);
-        tvAmount.setText(String.format("$%.2f", expense.amount));
-        setCategoryBackground(tvCategory, expense.category);
+        // Use getters for safety and good practice
+        tvDescription.setText(expense.getDescription());
+        tvCategory.setText(expense.getCategory());
+        tvDate.setText(expense.getDate());
+        tvAmount.setText(String.format("$%.2f", expense.getAmount()));
+        setCategoryBackground(tvCategory, expense.getCategory());
 
         ExpenseItem expenseItem = new ExpenseItem(expense, view, expenseId);
         expenseList.add(expenseItem);
 
-        // --- SET ONCLICK LISTENER FOR THE EDIT BUTTON ---
         btnEdit.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, AddExpenseActivity.class);
-            // Pass data to pre-fill the fields in AddExpenseActivity
             intent.putExtra("isEditMode", true);
             intent.putExtra("expenseId", expenseId);
-            intent.putExtra("description", expense.description);
-            intent.putExtra("amount", expense.amount);
-            intent.putExtra("category", expense.category);
-            intent.putExtra("date", expense.date);
+            intent.putExtra("description", expense.getDescription());
+            intent.putExtra("amount", expense.getAmount());
+            intent.putExtra("category", expense.getCategory());
+            intent.putExtra("date", expense.getDate());
             startActivityForResult(intent, REQUEST_CODE_EDIT_EXPENSE);
         });
 
@@ -197,7 +196,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void deleteExpense(String expenseId) {
         if (expenseId == null) return;
-        // Just remove from Firebase. The UI will refresh after.
         expenseDbRef.child(expenseId).removeValue()
                 .addOnSuccessListener(aVoid -> {
                     loadUserExpensesFromFirebase(); // Reload to update UI and totals
@@ -205,8 +203,6 @@ public class MainActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e -> Toast.makeText(this, "Failed to delete expense", Toast.LENGTH_SHORT).show());
     }
-
-    // --- Utility and other methods from your original file (no changes needed below) ---
 
     public static String getUserDisplayName(FirebaseUser user) {
         if (user.getDisplayName() != null && !user.getDisplayName().isEmpty()) {
@@ -219,6 +215,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setCategoryBackground(TextView tvCategory, String category) {
+        if (category == null) category = "other";
         int color;
         switch (category.toLowerCase()) {
             case "food": color = 0xFF10B981; break;
@@ -240,46 +237,42 @@ public class MainActivity extends AppCompatActivity {
         popup.getMenu().add("Logout");
 
         popup.setOnMenuItemClickListener(item -> {
-            switch (item.getTitle().toString()) {
-                case "About":
-                    new AlertDialog.Builder(this)
-                            .setTitle("About")
-                            .setMessage("Simple Expense Tracker\nVersion 1.0\nBuilt with ❤")
-                            .setPositiveButton("OK", null).show();
+            String title = item.getTitle().toString();
+            if ("About".equals(title)) {
+                new AlertDialog.Builder(this)
+                        .setTitle("About")
+                        .setMessage("Simple Expense Tracker\nVersion 1.0\nBuilt with ❤")
+                        .setPositiveButton("OK", null).show();
+                return true;
+            } else if ("Delete All Expenses".equals(title)) {
+                if (expenseList.isEmpty()) {
+                    Toast.makeText(this, "No expenses to delete", Toast.LENGTH_SHORT).show();
                     return true;
-
-                case "Delete All Expenses":
-                    if (expenseList.isEmpty()) {
-                        Toast.makeText(this, "No expenses to delete", Toast.LENGTH_SHORT).show();
-                        return true;
-                    }
-
-                    new AlertDialog.Builder(this)
-                            .setTitle("Delete All?")
-                            .setMessage("Delete all expenses? This can't be undone.")
-                            .setPositiveButton("Delete All", (d, w) -> {
-                                expenseDbRef.removeValue().addOnSuccessListener(aVoid -> {
-                                    loadUserExpensesFromFirebase(); // Reload to show empty state
-                                    Toast.makeText(this, "All expenses deleted", Toast.LENGTH_SHORT).show();
-                                });
-                            })
-                            .setNegativeButton("Cancel", null).show();
-                    return true;
-
-                case "Logout":
-                    new AlertDialog.Builder(this)
-                            .setTitle("Logout")
-                            .setMessage("Are you sure?")
-                            .setPositiveButton("Logout", (dialog, which) -> {
-                                FirebaseAuth.getInstance().signOut();
-                                navigateToLogin();
-                            })
-                            .setNegativeButton("Cancel", null).show();
-                    return true;
+                }
+                new AlertDialog.Builder(this)
+                        .setTitle("Delete All?")
+                        .setMessage("Delete all expenses? This can't be undone.")
+                        .setPositiveButton("Delete All", (d, w) -> {
+                            expenseDbRef.removeValue().addOnSuccessListener(aVoid -> {
+                                loadUserExpensesFromFirebase(); // Reload to show empty state
+                                Toast.makeText(this, "All expenses deleted", Toast.LENGTH_SHORT).show();
+                            });
+                        })
+                        .setNegativeButton("Cancel", null).show();
+                return true;
+            } else if ("Logout".equals(title)) {
+                new AlertDialog.Builder(this)
+                        .setTitle("Logout")
+                        .setMessage("Are you sure?")
+                        .setPositiveButton("Logout", (dialog, which) -> {
+                            FirebaseAuth.getInstance().signOut();
+                            navigateToLogin();
+                        })
+                        .setNegativeButton("Cancel", null).show();
+                return true;
             }
             return false;
         });
-
         popup.show();
     }
 
@@ -290,20 +283,39 @@ public class MainActivity extends AppCompatActivity {
         finish();
     }
 
+    /**
+     * This is the Data Model for an Expense.
+     * Fields are private and accessed via public getters for proper encapsulation.
+     * It includes an empty constructor which is REQUIRED for Firebase Realtime Database.
+     */
     public static class Expense {
-        public String description;
-        public double amount;
-        public String category;
-        public String date;
+        private String description;
+        private String id;
+        private String category; // This is currently private
+        private double amount;
+        private long timestamp;
+        private String date;
+
+        // REQUIRED: empty constructor for Firebase DataSnapshot.getValue(Expense.class)
         public Expense() {}
+
         public Expense(String description, double amount, String category, String date) {
             this.description = description;
             this.amount = amount;
             this.category = category;
             this.date = date;
         }
+
+        // --- GETTER METHODS ---
+        public String getDescription() { return description; }
+        public double getAmount() { return amount; }
+        public String getCategory() { return category; }
+        public String getDate() { return date; }
     }
 
+    /**
+     * Helper class to hold a reference to an Expense and its corresponding View and ID.
+     */
     private static class ExpenseItem {
         public Expense expense;
         public View view;
@@ -315,6 +327,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -322,7 +335,9 @@ public class MainActivity extends AppCompatActivity {
             navigateToLogin();
         }
     }
+
     public static int getCategoryColor(String category) {
+        if (category == null) category = "other";
         switch (category.toLowerCase()) {
             case "food": return 0xFF10B981;
             case "transport": return 0xFF3B82F6;
@@ -344,7 +359,7 @@ public class MainActivity extends AppCompatActivity {
         ExpenseComponent allExpensesGroup = new ExpenseGroup("Total Expenses");
         Map<String, ExpenseGroup> categoryGroups = new HashMap<>();
         for (ExpenseItem item : expenseList) {
-            String category = item.expense.category;
+            String category = item.expense.getCategory();
             ExpenseGroup categoryGroup = categoryGroups.get(category);
             if (categoryGroup == null) {
                 categoryGroup = new ExpenseGroup(category);
@@ -355,11 +370,39 @@ public class MainActivity extends AppCompatActivity {
             categoryGroup.add(singleExpenseLeaf);
         }
         Log.d("CompositeDemo", "--- Calculating Totals ---");
-        ExpenseGroup foodGroup = categoryGroups.get("Food");
-        if (foodGroup != null) {
-            Log.d("CompositeDemo", "Total for " + foodGroup.getTitle() + ": $" + foodGroup.getAmount());
-        }
         Log.d("CompositeDemo", "GRAND TOTAL (" + allExpensesGroup.getTitle() + "): $" + allExpensesGroup.getAmount());
         Log.d("CompositeDemo", "------------------------------------------");
+    }
+
+    private void applyStrategyExample() {
+        Log.d("StrategyPattern", "--- Demonstrating Strategy Pattern ---");
+        if(expenseList.isEmpty()) {
+            Log.d("StrategyPattern", "No expenses to calculate.");
+            return;
+        }
+
+        ExpenseCalculatorContext context = new ExpenseCalculatorContext();
+        List<Expense> expensesOnly = getExpenseList();
+
+        context.setStrategy(new TotalExpenseStrategy());
+        double totalAll = context.executeStrategy(expensesOnly);
+        Log.d("StrategyPattern", "Total (All Expenses): $" + totalAll);
+
+        context.setStrategy(new CategoryExpenseStrategy("Food"));
+        double totalFood = context.executeStrategy(expensesOnly);
+        Log.d("StrategyPattern", "Total (Food): $" + totalFood);
+
+        context.setStrategy(new DailyExpenseStrategy("12/08/2025")); // Example date
+        double totalToday = context.executeStrategy(expensesOnly);
+        Log.d("StrategyPattern", "Total for 12/08/2025: $" + totalToday);
+        Log.d("StrategyPattern", "------------------------------------");
+    }
+
+    private List<Expense> getExpenseList() {
+        List<Expense> expenses = new ArrayList<>();
+        for (ExpenseItem item : expenseList) {
+            expenses.add(item.expense);
+        }
+        return expenses;
     }
 }

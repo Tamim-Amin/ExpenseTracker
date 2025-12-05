@@ -13,13 +13,13 @@ public class SingleExpense implements ExpenseComponent {
     @Override
     public String getTitle() {
         // Return the description for the leaf
-        return this.expense.description;
+        return this.expense.getDescription();
     }
 
     @Override
     public double getAmount() {
         // The operation for a Leaf is to just return its own value
-        return this.expense.amount;
+        return this.expense.getAmount();
     }
 
     @Override

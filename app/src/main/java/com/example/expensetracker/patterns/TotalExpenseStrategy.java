@@ -9,7 +9,7 @@ public class TotalExpenseStrategy implements ExpenseCalculationStrategy {
     public double calculate(List<MainActivity.Expense> expenses) {
         double total = 0;
         for (MainActivity.Expense expense : expenses) {
-            total += expense.amount;
+            total += expense.getAmount();
         }
         return total;
     }
