@@ -362,4 +362,34 @@ public class MainActivity extends AppCompatActivity {
         Log.d("CompositeDemo", "GRAND TOTAL (" + allExpensesGroup.getTitle() + "): $" + allExpensesGroup.getAmount());
         Log.d("CompositeDemo", "------------------------------------------");
     }
+
+    // Example usage of Strategy Pattern
+    private void applyStrategyExample() {
+        ExpenseCalculatorContext context = new ExpenseCalculatorContext();
+
+        // 1. Total of ALL expenses
+        context.setStrategy(new TotalExpenseStrategy());
+        double totalAll = context.executeStrategy(getExpenseList());
+        Log.d("StrategyPattern", "Total All Expenses: $" + totalAll);
+
+        // 2. Total of only FOOD category
+        context.setStrategy(new CategoryExpenseStrategy("Food"));
+        double totalFood = context.executeStrategy(getExpenseList());
+        Log.d("StrategyPattern", "Total Food Expenses: $" + totalFood);
+
+        // 3. Total of today
+        context.setStrategy(new DailyExpenseStrategy("2025-11-06")); // Example
+        double totalToday = context.executeStrategy(getExpenseList());
+        Log.d("StrategyPattern", "Total Today Expenses: $" + totalToday);
+    }
+
+    // Convert ExpenseItem list to Expense list
+    private List<Expense> getExpenseList() {
+        List<Expense> expenses = new ArrayList<>();
+        for (ExpenseItem item : expenseList) {
+            expenses.add(item.expense);
+        }
+        return expenses;
+    }
+
 }
