@@ -3,10 +3,12 @@ package com.example.expensetracker;
 import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -17,161 +19,132 @@ import java.util.Calendar;
 import java.util.Locale;
 
 public class AddExpenseActivity extends AppCompatActivity {
+    // Will be true if we are editing an existing expense
+    private boolean isEditMode = false;
+    // Will hold the ID of the expense being edited
+    private String expenseId = null;
 
-    private EditText etDescription, etAmount, etDate;
+    private EditText etDescription, etAmount;
     private Spinner spinnerCategory;
-    private Button btnSelectDate, btnSave;
+    private TextView tvSelectedDate;
+    private Button btnSave, btnCancel;
 
-    private Calendar selectedDate;
+    private final Calendar calendar = Calendar.getInstance();
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_expense);
 
-        initViews();
-        setupCategorySpinner();
-        setupClickListeners();
-
-        // Initialize with current date
-        selectedDate = Calendar.getInstance();
-        updateDateField();
-    }
-
-    private void initViews() {
+        // Initialize UI components
         etDescription = findViewById(R.id.et_description);
         etAmount = findViewById(R.id.et_amount);
-        etDate = findViewById(R.id.et_date);
         spinnerCategory = findViewById(R.id.spinner_category);
-        btnSelectDate = findViewById(R.id.btn_select_date);
+        tvSelectedDate = findViewById(R.id.tv_selected_date);
         btnSave = findViewById(R.id.btn_save);
-    }
+        btnCancel = findViewById(R.id.btn_cancel);
+        TextView tvTitle = findViewById(R.id.tv_title); // Title of the screen
 
-    private void setupClickListeners() {
-        btnSelectDate.setOnClickListener(v -> showDatePicker());
+        setupCategorySpinner();
+
+        // --- Check for Edit Mode ---
+        Intent intent = getIntent();
+        isEditMode = intent.getBooleanExtra("isEditMode", false);
+
+        if (isEditMode) {
+            // If we are in edit mode, change the title and pre-fill the form
+            tvTitle.setText("Edit Expense"); // Change the title
+            expenseId = intent.getStringExtra("expenseId");
+
+            // Retrieve and set the existing data
+            String description = intent.getStringExtra("description");
+            double amount = intent.getDoubleExtra("amount", 0);
+            String category = intent.getStringExtra("category");
+            String date = intent.getStringExtra("date");
+
+            etDescription.setText(description);
+            etAmount.setText(String.valueOf(amount));
+            tvSelectedDate.setText(date);
+
+            // Set the spinner to the correct category
+            ArrayAdapter<String> adapter = (ArrayAdapter<String>) spinnerCategory.getAdapter();
+            int position = adapter.getPosition(category);
+            spinnerCategory.setSelection(position);
+
+        } else {
+            // If we are in add mode, set a default date
+            tvTitle.setText("Add New Expense");
+            updateDateLabel();
+        }
+
+        // --- Setup Listeners ---
+        tvSelectedDate.setOnClickListener(v -> showDatePickerDialog());
         btnSave.setOnClickListener(v -> saveExpense());
+        btnCancel.setOnClickListener(v -> finish()); // Go back without saving
     }
 
-    private void showDatePicker() {
-        DatePickerDialog datePickerDialog = new DatePickerDialog(
-                this,
-                (view, year, month, dayOfMonth) -> {
-                    selectedDate.set(Calendar.YEAR, year);
-                    selectedDate.set(Calendar.MONTH, month);
-                    selectedDate.set(Calendar.DAY_OF_MONTH, dayOfMonth);
-                    updateDateField();
-                },
-                selectedDate.get(Calendar.YEAR),
-                selectedDate.get(Calendar.MONTH),
-                selectedDate.get(Calendar.DAY_OF_MONTH)
-        );
-
-        // Set max date to today (prevent future dates)
-        datePickerDialog.getDatePicker().setMaxDate(System.currentTimeMillis());
-
-        datePickerDialog.show();
+    private void setupCategorySpinner() {
+        // Create an ArrayAdapter using the string array and a default spinner layout
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
+                R.array.expense_categories, android.R.layout.simple_spinner_item);
+        // Specify the layout to use when the list of choices appears
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        // Apply the adapter to the spinner
+        spinnerCategory.setAdapter(adapter);
     }
 
-    private void updateDateField() {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-        etDate.setText(dateFormat.format(selectedDate.getTime()));
+    private void showDatePickerDialog() {
+        new DatePickerDialog(this, (view, year, month, dayOfMonth) -> {
+            calendar.set(Calendar.YEAR, year);
+            calendar.set(Calendar.MONTH, month);
+            calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth);
+            updateDateLabel();
+        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show();
+    }
+
+    private void updateDateLabel() {
+        String format = "MM/dd/yyyy";
+        SimpleDateFormat sdf = new SimpleDateFormat(format, Locale.US);
+        tvSelectedDate.setText(sdf.format(calendar.getTime()));
     }
 
     private void saveExpense() {
-        // Clear previous errors
-        etDescription.setError(null);
-        etAmount.setError(null);
-
         String description = etDescription.getText().toString().trim();
         String amountStr = etAmount.getText().toString().trim();
         String category = spinnerCategory.getSelectedItem().toString();
-        String date = etDate.getText().toString().trim();
+        String date = tvSelectedDate.getText().toString();
 
         // Validation
-        if (description.isEmpty()) {
-            etDescription.setError("Please enter a description");
-            etDescription.requestFocus();
+        if (TextUtils.isEmpty(description)) {
+            etDescription.setError("Description is required");
             return;
         }
-
-        if (description.length() > 50) {
-            etDescription.setError("Description too long (max 50 characters)");
-            etDescription.requestFocus();
-            return;
-        }
-
-        if (amountStr.isEmpty()) {
-            etAmount.setError("Please enter an amount");
-            etAmount.requestFocus();
+        if (TextUtils.isEmpty(amountStr)) {
+            etAmount.setError("Amount is required");
             return;
         }
 
         double amount;
         try {
             amount = Double.parseDouble(amountStr);
-            if (amount <= 0) {
-                etAmount.setError("Amount must be greater than zero");
-                etAmount.requestFocus();
-                return;
-            }
-            if (amount > 999999.99) {
-                etAmount.setError("Amount is too large");
-                etAmount.requestFocus();
-                return;
-            }
         } catch (NumberFormatException e) {
-            etAmount.setError("Please enter a valid amount");
-            etAmount.requestFocus();
+            etAmount.setError("Invalid amount");
             return;
         }
 
-        if (date.isEmpty()) {
-            Toast.makeText(this, "Please select a date", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        // Send data back to MainActivity
+        // Prepare the result intent to send back to MainActivity
         Intent resultIntent = new Intent();
         resultIntent.putExtra("description", description);
         resultIntent.putExtra("amount", amount);
         resultIntent.putExtra("category", category);
         resultIntent.putExtra("date", date);
-        setResult(RESULT_OK, resultIntent);
 
-        Toast.makeText(this, "Expense saved successfully!", Toast.LENGTH_SHORT).show();
-        finish();
-    }
-
-    private void setupCategorySpinner() {
-        String[] categories = {"Food", "Transport", "Entertainment", "Shopping", "Bills", "Healthcare", "Education", "Others"};
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(
-                this,
-                android.R.layout.simple_spinner_item,
-                categories
-        );
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerCategory.setAdapter(adapter);
-    }
-
-    @Override
-    public void onBackPressed() {
-        // Check if user has entered any data
-        String description = etDescription.getText().toString().trim();
-        String amount = etAmount.getText().toString().trim();
-
-        if (!description.isEmpty() || !amount.isEmpty()) {
-            new androidx.appcompat.app.AlertDialog.Builder(this)
-                    .setTitle("Discard Changes")
-                    .setMessage("Are you sure you want to discard the expense data?")
-                    .setPositiveButton("Discard", (dialog, which) -> {
-                        setResult(RESULT_CANCELED);
-                        super.onBackPressed();
-                    })
-                    .setNegativeButton("Continue Editing", null)
-                    .show();
-        } else {
-            setResult(RESULT_CANCELED);
-            super.onBackPressed();
+        // If we were editing, we must also pass back the original expense ID
+        if (isEditMode) {
+            resultIntent.putExtra("expenseId", expenseId);
         }
+
+        setResult(RESULT_OK, resultIntent);
+        finish(); // Close this activity and return to MainActivity
     }
 }

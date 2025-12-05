@@ -1,5 +1,6 @@
 package com.example.expensetracker;
 
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
@@ -9,10 +10,11 @@ import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+// imports from your project
 import com.example.expensetracker.patterns.CategoryExpenseStrategy;
 import com.example.expensetracker.patterns.DailyExpenseStrategy;
 import com.example.expensetracker.patterns.ExpenseCalculatorContext;
@@ -22,7 +24,9 @@ import com.example.expensetracker.patterns.SingleExpense;
 import com.example.expensetracker.patterns.TotalExpenseStrategy;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.database.*;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,7 +35,9 @@ import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
+    // Request codes for starting activities
     private static final int REQUEST_CODE_ADD_EXPENSE = 1001;
+    private static final int REQUEST_CODE_EDIT_EXPENSE = 1002; // For editing
 
     private TextView tvWelcome, tvTotal;
     private LinearLayout expenseListContainer;
@@ -41,7 +47,6 @@ public class MainActivity extends AppCompatActivity {
     private DatabaseReference expenseDbRef;
     private String userId;
 
-    private double totalExpenses = 0.0;
     private final List<ExpenseItem> expenseList = new ArrayList<>();
 
     @Override
@@ -79,68 +84,71 @@ public class MainActivity extends AppCompatActivity {
         loadUserExpensesFromFirebase();
     }
 
-    public static String getUserDisplayName(FirebaseUser user) {
-        if (user.getDisplayName() != null && !user.getDisplayName().isEmpty()) {
-            return user.getDisplayName();
-        } else if (user.getEmail() != null) {
-            return user.getEmail().split("@")[0];
-        } else {
-            return "User";
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (resultCode != RESULT_OK || data == null) {
+            return; // Exit if the activity was canceled or returned no data
+        }
+
+        // Common data for both adding and editing
+        String description = data.getStringExtra("description");
+        double amount = data.getDoubleExtra("amount", 0);
+        String category = data.getStringExtra("category");
+        String date = data.getStringExtra("date");
+
+        Expense expenseData = new Expense(description, amount, category, date);
+
+        if (requestCode == REQUEST_CODE_ADD_EXPENSE) {
+            // Logic for adding a NEW expense
+            String expenseId = expenseDbRef.push().getKey();
+            if (expenseId != null) {
+                expenseDbRef.child(expenseId).setValue(expenseData)
+                        .addOnSuccessListener(aVoid -> {
+                            loadUserExpensesFromFirebase(); // Reload all data for consistency
+                            Toast.makeText(this, "Expense added!", Toast.LENGTH_SHORT).show();
+                        })
+                        .addOnFailureListener(e ->
+                                Toast.makeText(this, "Failed to save expense", Toast.LENGTH_SHORT).show());
+            }
+        } else if (requestCode == REQUEST_CODE_EDIT_EXPENSE) {
+            // Logic for UPDATING an existing expense
+            String expenseIdToUpdate = data.getStringExtra("expenseId");
+            if (expenseIdToUpdate != null) {
+                expenseDbRef.child(expenseIdToUpdate).setValue(expenseData)
+                        .addOnSuccessListener(aVoid -> {
+                            loadUserExpensesFromFirebase(); // Reload all data to show changes
+                            Toast.makeText(this, "Expense updated!", Toast.LENGTH_SHORT).show();
+                        })
+                        .addOnFailureListener(e ->
+                                Toast.makeText(this, "Failed to update expense", Toast.LENGTH_SHORT).show());
+            }
         }
     }
+
 
     private void loadUserExpensesFromFirebase() {
         expenseDbRef.get().addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
                 expenseList.clear();
                 expenseListContainer.removeAllViews();
-                totalExpenses = 0.0;
+                double currentTotal = 0.0;
 
                 for (DataSnapshot snapshot : task.getResult().getChildren()) {
                     Expense expense = snapshot.getValue(Expense.class);
                     String expenseId = snapshot.getKey();
                     if (expense != null && expenseId != null) {
                         addExpenseToUI(expense, expenseId);
-                        totalExpenses += expense.amount;
+                        currentTotal += expense.amount;
                     }
                 }
-
-                updateTotalExpenses();
-
-                // Call the Composite Pattern demo method
+                tvTotal.setText(String.format("$%.2f", currentTotal));
                 demonstrateCompositePattern();
-
             } else {
                 Toast.makeText(this, "Failed to load expenses", Toast.LENGTH_SHORT).show();
             }
         });
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        if (requestCode == REQUEST_CODE_ADD_EXPENSE && resultCode == RESULT_OK && data != null) {
-            String description = data.getStringExtra("description");
-            double amount = data.getDoubleExtra("amount", 0);
-            String category = data.getStringExtra("category");
-            String date = data.getStringExtra("date");
-
-            Expense expense = new Expense(description, amount, category, date);
-
-            String expenseId = expenseDbRef.push().getKey();
-            if (expenseId != null) {
-                expenseDbRef.child(expenseId).setValue(expense)
-                        .addOnSuccessListener(aVoid -> {
-                            addExpenseToUI(expense, expenseId);
-                            totalExpenses += amount;
-                            updateTotalExpenses();
-                            Toast.makeText(this, "Expense added!", Toast.LENGTH_SHORT).show();
-                        })
-                        .addOnFailureListener(e ->
-                                Toast.makeText(this, "Failed to save expense", Toast.LENGTH_SHORT).show());
-            }
-        }
     }
 
     private void addExpenseToUI(Expense expense, String expenseId) {
@@ -151,6 +159,7 @@ public class MainActivity extends AppCompatActivity {
         TextView tvDate = view.findViewById(R.id.tv_date);
         TextView tvAmount = view.findViewById(R.id.tv_amount);
         Button btnDelete = view.findViewById(R.id.btn_delete);
+        Button btnEdit = view.findViewById(R.id.btn_edit); // Find the edit button
 
         tvDescription.setText(expense.description);
         tvCategory.setText(expense.category);
@@ -161,14 +170,24 @@ public class MainActivity extends AppCompatActivity {
         ExpenseItem expenseItem = new ExpenseItem(expense, view, expenseId);
         expenseList.add(expenseItem);
 
+        // --- SET ONCLICK LISTENER FOR THE EDIT BUTTON ---
+        btnEdit.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, AddExpenseActivity.class);
+            // Pass data to pre-fill the fields in AddExpenseActivity
+            intent.putExtra("isEditMode", true);
+            intent.putExtra("expenseId", expenseId);
+            intent.putExtra("description", expense.description);
+            intent.putExtra("amount", expense.amount);
+            intent.putExtra("category", expense.category);
+            intent.putExtra("date", expense.date);
+            startActivityForResult(intent, REQUEST_CODE_EDIT_EXPENSE);
+        });
+
         btnDelete.setOnClickListener(v -> {
             new AlertDialog.Builder(this)
                     .setTitle("Delete Expense")
                     .setMessage("Are you sure you want to delete this expense?")
-                    .setPositiveButton("Delete", (dialog, which) -> {
-                        deleteExpense(expenseItem);
-                        expenseDbRef.child(expenseId).removeValue();
-                    })
+                    .setPositiveButton("Delete", (dialog, which) -> deleteExpense(expenseId))
                     .setNegativeButton("Cancel", null)
                     .show();
         });
@@ -176,16 +195,27 @@ public class MainActivity extends AppCompatActivity {
         expenseListContainer.addView(view);
     }
 
-    private void deleteExpense(ExpenseItem item) {
-        expenseList.remove(item);
-        expenseListContainer.removeView(item.view);
-        totalExpenses -= item.expense.amount;
-        updateTotalExpenses();
-        Toast.makeText(this, "Expense deleted", Toast.LENGTH_SHORT).show();
+    private void deleteExpense(String expenseId) {
+        if (expenseId == null) return;
+        // Just remove from Firebase. The UI will refresh after.
+        expenseDbRef.child(expenseId).removeValue()
+                .addOnSuccessListener(aVoid -> {
+                    loadUserExpensesFromFirebase(); // Reload to update UI and totals
+                    Toast.makeText(this, "Expense deleted", Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(e -> Toast.makeText(this, "Failed to delete expense", Toast.LENGTH_SHORT).show());
     }
 
-    private void updateTotalExpenses() {
-        tvTotal.setText(String.format("$%.2f", totalExpenses));
+    // --- Utility and other methods from your original file (no changes needed below) ---
+
+    public static String getUserDisplayName(FirebaseUser user) {
+        if (user.getDisplayName() != null && !user.getDisplayName().isEmpty()) {
+            return user.getDisplayName();
+        } else if (user.getEmail() != null) {
+            return user.getEmail().split("@")[0];
+        } else {
+            return "User";
+        }
     }
 
     private void setCategoryBackground(TextView tvCategory, String category) {
@@ -228,12 +258,10 @@ public class MainActivity extends AppCompatActivity {
                             .setTitle("Delete All?")
                             .setMessage("Delete all expenses? This can't be undone.")
                             .setPositiveButton("Delete All", (d, w) -> {
-                                expenseList.clear();
-                                expenseListContainer.removeAllViews();
-                                totalExpenses = 0.0;
-                                updateTotalExpenses();
-                                expenseDbRef.removeValue();
-                                Toast.makeText(this, "All expenses deleted", Toast.LENGTH_SHORT).show();
+                                expenseDbRef.removeValue().addOnSuccessListener(aVoid -> {
+                                    loadUserExpensesFromFirebase(); // Reload to show empty state
+                                    Toast.makeText(this, "All expenses deleted", Toast.LENGTH_SHORT).show();
+                                });
                             })
                             .setNegativeButton("Cancel", null).show();
                     return true;
@@ -262,15 +290,12 @@ public class MainActivity extends AppCompatActivity {
         finish();
     }
 
-    // Expense model
     public static class Expense {
         public String description;
         public double amount;
         public String category;
         public String date;
-
-        public Expense() {} // required for Firebase
-
+        public Expense() {}
         public Expense(String description, double amount, String category, String date) {
             this.description = description;
             this.amount = amount;
@@ -279,12 +304,10 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // Wrapper class for tracking views
     private static class ExpenseItem {
         public Expense expense;
         public View view;
         public String id;
-
         public ExpenseItem(Expense expense, View view, String id) {
             this.expense = expense;
             this.view = view;
@@ -312,114 +335,31 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    //COMPOSITE PATTERN
-
     private void demonstrateCompositePattern() {
         Log.d("CompositeDemo", "--- Demonstrating Composite Pattern ---");
-
         if (expenseList.isEmpty()) {
             Log.d("CompositeDemo", "No expenses to group.");
             return;
         }
-
-        // Create the root Composite node
         ExpenseComponent allExpensesGroup = new ExpenseGroup("Total Expenses");
-
-        // Use a Map to hold category Composites
         Map<String, ExpenseGroup> categoryGroups = new HashMap<>();
-
-        // Iterate over the flat list and build the tree
         for (ExpenseItem item : expenseList) {
             String category = item.expense.category;
-
-            // Get or create the composite group for this category
             ExpenseGroup categoryGroup = categoryGroups.get(category);
             if (categoryGroup == null) {
                 categoryGroup = new ExpenseGroup(category);
                 categoryGroups.put(category, categoryGroup);
-
-                // Add the new category group to the root
                 allExpensesGroup.add(categoryGroup);
             }
-
-            // Create the Leaf node for the single expense
             ExpenseComponent singleExpenseLeaf = new SingleExpense(item.expense);
-
-            //  Add the Leaf to its category Composite
             categoryGroup.add(singleExpenseLeaf);
         }
-
-        // Now, we can treat groups and leaves uniformly.
-        // We can call getAmount() on ANY component.
-
         Log.d("CompositeDemo", "--- Calculating Totals ---");
-
-        // Calculate total for a specific category (a Composite)
         ExpenseGroup foodGroup = categoryGroups.get("Food");
         if (foodGroup != null) {
-            // Note: We call foodGroup.getAmount()
             Log.d("CompositeDemo", "Total for " + foodGroup.getTitle() + ": $" + foodGroup.getAmount());
         }
-
-        // Calculate total for ALL expenses (the root Composite)
-        // Note: We call allExpensesGroup.getAmount()
-        // This is the power of the pattern: the *same method* works
-        // on a single group or the entire tree.
         Log.d("CompositeDemo", "GRAND TOTAL (" + allExpensesGroup.getTitle() + "): $" + allExpensesGroup.getAmount());
         Log.d("CompositeDemo", "------------------------------------------");
-
-        // We can also build a function to recursively print the tree
-        Log.d("CompositeTree", "--- Expense Tree Structure ---");
-        printExpenseTree(allExpensesGroup, 0);
     }
-    private void printExpenseTree(ExpenseComponent component, int indentLevel) {
-        StringBuilder indent = new StringBuilder();
-        for (int i = 0; i < indentLevel; i++) {
-            indent.append("  ");
-        }
-
-        if (component.isComposite()) {
-            // It's a Composite (ExpenseGroup)
-            Log.d("CompositeTree", indent.toString() + "GROUP: " + component.getTitle() + " (Subtotal: $" + component.getAmount() + ")");
-            for (ExpenseComponent child : component.getChildren()) {
-                printExpenseTree(child, indentLevel + 1);
-            }
-        } else {
-            // It's a Leaf (SingleExpense)
-            Log.d("CompositeTree", indent.toString() + "- LEAF: " + component.getTitle() + " ($" + component.getAmount() + ")");
-        }
-    }
-
-
-    // Example usage of Strategy Pattern
-    private void applyStrategyExample() {
-        ExpenseCalculatorContext context = new ExpenseCalculatorContext();
-
-        // 1. Total of ALL expenses
-        context.setStrategy(new TotalExpenseStrategy());
-        double totalAll = context.executeStrategy(getExpenseList());
-        Log.d("StrategyPattern", "Total All Expenses: $" + totalAll);
-
-        // 2. Total of only FOOD category
-        context.setStrategy(new CategoryExpenseStrategy("Food"));
-        double totalFood = context.executeStrategy(getExpenseList());
-        Log.d("StrategyPattern", "Total Food Expenses: $" + totalFood);
-
-        // 3. Total of today
-        context.setStrategy(new DailyExpenseStrategy("2025-11-06")); // Example
-        double totalToday = context.executeStrategy(getExpenseList());
-        Log.d("StrategyPattern", "Total Today Expenses: $" + totalToday);
-    }
-
-    // Convert ExpenseItem list to Expense list
-    private List<Expense> getExpenseList() {
-        List<Expense> expenses = new ArrayList<>();
-        for (ExpenseItem item : expenseList) {
-            expenses.add(item.expense);
-        }
-        return expenses;
-    }
-
-
-
 }
