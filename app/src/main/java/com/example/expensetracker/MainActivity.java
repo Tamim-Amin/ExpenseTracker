@@ -20,6 +20,8 @@ import com.example.expensetracker.patterns.DailyExpenseStrategy;
 import com.example.expensetracker.patterns.ExpenseCalculatorContext;
 import com.example.expensetracker.patterns.ExpenseComponent;
 import com.example.expensetracker.patterns.ExpenseGroup;
+import com.example.expensetracker.patterns.ExpenseObserver;
+import com.example.expensetracker.patterns.ExpenseRepository;
 import com.example.expensetracker.patterns.SingleExpense;
 import com.example.expensetracker.patterns.TotalExpenseStrategy;
 import com.google.firebase.auth.FirebaseAuth;
@@ -34,7 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements ExpenseObserver {
 
     // Request codes for starting activities
     private static final int REQUEST_CODE_ADD_EXPENSE = 1001;
@@ -51,6 +53,12 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // 2. Register this activity as an observer
+        ExpenseRepository.getInstance().addObserver(this);
+        // Trigger the load
+        ExpenseRepository.getInstance().loadExpenses();
+
 
         mAuth = FirebaseAuth.getInstance();
         FirebaseUser currentUser = mAuth.getCurrentUser();
@@ -404,5 +412,28 @@ public class MainActivity extends AppCompatActivity {
             expenses.add(item.expense);
         }
         return expenses;
+    }
+    @Override
+    public void onExpensesUpdated(List<Expense> expenses) {
+        // Clear old views
+        expenseList.clear();
+        expenseListContainer.removeAllViews();
+        double currentTotal = 0.0;
+
+        // Rebuild the UI with the new list
+        for (Expense expense : expenses) {
+            // You might need to refactor addExpenseToUI slightly to handle IDs if they aren't in the Expense object
+            // Or fetch IDs alongside data in the Repository
+            addExpenseToUI(expense, "temp_id"); // Ideally, add ID to your Expense model
+            currentTotal += expense.getAmount();
+        }
+
+        tvTotal.setText(String.format("$%.2f", currentTotal));
+    }
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // 4. Clean up
+        ExpenseRepository.getInstance().removeObserver(this);
     }
 }
