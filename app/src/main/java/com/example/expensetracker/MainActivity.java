@@ -17,6 +17,7 @@ import androidx.appcompat.app.AppCompatActivity;
 // imports from your project
 import com.example.expensetracker.patterns.CategoryExpenseStrategy;
 import com.example.expensetracker.patterns.DailyExpenseStrategy;
+import com.example.expensetracker.patterns.ExpenseAnalysisFacade;
 import com.example.expensetracker.patterns.ExpenseCalculatorContext;
 import com.example.expensetracker.patterns.ExpenseComponent;
 import com.example.expensetracker.patterns.ExpenseGroup;
@@ -44,6 +45,7 @@ public class MainActivity extends AppCompatActivity implements ExpenseObserver {
 
     private TextView tvWelcome, tvTotal;
     private LinearLayout expenseListContainer;
+    private ExpenseAnalysisFacade analysisFacade;
 
     private FirebaseAuth mAuth;
     private DatabaseReference expenseDbRef;
@@ -58,6 +60,8 @@ public class MainActivity extends AppCompatActivity implements ExpenseObserver {
         ExpenseRepository.getInstance().addObserver(this);
         // Trigger the load
         ExpenseRepository.getInstance().loadExpenses();
+        // Initialize the Facade
+        analysisFacade = new ExpenseAnalysisFacade();
 
 
         mAuth = FirebaseAuth.getInstance();
@@ -140,19 +144,36 @@ public class MainActivity extends AppCompatActivity implements ExpenseObserver {
             if (task.isSuccessful()) {
                 expenseList.clear();
                 expenseListContainer.removeAllViews();
-                double currentTotal = 0.0;
+
+                // We can use the Facade to calculate the total for the UI
+                List<Expense> tempExpenseListForStrategy = new ArrayList<>();
 
                 for (DataSnapshot snapshot : Objects.requireNonNull(task.getResult()).getChildren()) {
                     Expense expense = snapshot.getValue(Expense.class);
                     String expenseId = snapshot.getKey();
                     if (expense != null && expenseId != null) {
                         addExpenseToUI(expense, expenseId);
-                        currentTotal += expense.getAmount();
+                        tempExpenseListForStrategy.add(expense);
                     }
                 }
+
+                // --- FACADE IMPLEMENTATION ---
+
+                // 1. Use Facade to get the Total for the UI (Replaces manual loop sum)
+                double currentTotal = analysisFacade.calculateTotal(tempExpenseListForStrategy);
                 tvTotal.setText(String.format("$%.2f", currentTotal));
-                demonstrateCompositePattern();
-                applyStrategyExample(); // Call strategy example after loading
+
+                List<Expense> expensesOnly = getExpenseList();
+
+                // 2. Use Facade to run complex Composite logic
+                analysisFacade.generateCompositeAnalysisLog(expensesOnly);
+
+                // 3. Use Facade to run specific Strategy calculations (Logging examples)
+                double foodTotal = analysisFacade.calculateCategoryTotal(expensesOnly, "Food");
+                Log.d("FacadeDemo", "Food Total via Facade: " + foodTotal);
+
+                // -----------------------------
+
             } else {
                 Toast.makeText(this, "Failed to load expenses", Toast.LENGTH_SHORT).show();
             }
