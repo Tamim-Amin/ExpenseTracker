@@ -16,6 +16,10 @@ import androidx.appcompat.app.AppCompatActivity;
 
 // imports from your project
 import com.example.expensetracker.patterns.CategoryExpenseStrategy;
+// __FACTORY PATTERN START__: Import the factory classes.
+import com.example.expensetracker.patterns.ConcreteExpenseFactory;
+import com.example.expensetracker.patterns.ExpenseComponentFactory;
+// __FACTORY PATTERN END__
 import com.example.expensetracker.patterns.DailyExpenseStrategy;
 import com.example.expensetracker.patterns.ExpenseAnalysisFacade;
 import com.example.expensetracker.patterns.ExpenseCalculatorContext;
@@ -94,6 +98,26 @@ public class MainActivity extends AppCompatActivity implements ExpenseObserver {
 
         loadUserExpensesFromFirebase();
     }
+
+    // ✅ FIX: Renamed this method from onExpensesLoaded to onExpensesUpdated to match the ExpenseObserver interface
+    @Override
+    public void onExpensesUpdated(List<Expense> expenses) {
+        // When the repository notifies us, update the UI.
+        expenseList.clear();
+        expenseListContainer.removeAllViews();
+        double currentTotal = 0.0;
+
+        for (Expense expense : expenses) {
+            addExpenseToUI(expense, "some-id"); // We might need a way to get the real ID.
+            currentTotal += expense.getAmount();
+        }
+
+        tvTotal.setText(String.format("$%.2f", currentTotal));
+        demonstrateCompositePattern();
+        applyStrategyExample(); // Call strategy example after loading
+        Toast.makeText(this, "Expenses updated via Observer!", Toast.LENGTH_SHORT).show();
+    }
+
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
@@ -312,11 +336,7 @@ public class MainActivity extends AppCompatActivity implements ExpenseObserver {
         finish();
     }
 
-    /**
-     * This is the Data Model for an Expense.
-     * Fields are private and accessed via public getters for proper encapsulation.
-     * It includes an empty constructor which is REQUIRED for Firebase Realtime Database.
-     */
+
     public static class Expense {
         private String description;
         private String id;
@@ -365,6 +385,14 @@ public class MainActivity extends AppCompatActivity implements ExpenseObserver {
         }
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // 4. Unregister the observer to prevent memory leaks
+        ExpenseRepository.getInstance().removeObserver(this);
+    }
+
+
     public static int getCategoryColor(String category) {
         if (category == null) category = "other";
         switch (category.toLowerCase()) {
@@ -380,81 +408,61 @@ public class MainActivity extends AppCompatActivity implements ExpenseObserver {
     }
 
     private void demonstrateCompositePattern() {
-        Log.d("CompositeDemo", "--- Demonstrating Composite Pattern ---");
+        Log.d("CompositeDemo", "--- Demonstrating Composite Pattern with Factory ---");
         if (expenseList.isEmpty()) {
             Log.d("CompositeDemo", "No expenses to group.");
             return;
         }
+
+        // __FACTORY PATTERN START__: Create an instance of the Concrete Factory.
+        ExpenseComponentFactory expenseFactory = new ConcreteExpenseFactory();
+
         ExpenseComponent allExpensesGroup = new ExpenseGroup("Total Expenses");
         Map<String, ExpenseGroup> categoryGroups = new HashMap<>();
+
         for (ExpenseItem item : expenseList) {
             String category = item.expense.getCategory();
             ExpenseGroup categoryGroup = categoryGroups.get(category);
+
             if (categoryGroup == null) {
+                // We still create Groups directly as they are containers
                 categoryGroup = new ExpenseGroup(category);
                 categoryGroups.put(category, categoryGroup);
                 allExpensesGroup.add(categoryGroup);
             }
-            ExpenseComponent singleExpenseLeaf = new SingleExpense(item.expense);
+
+            ExpenseComponent singleExpenseLeaf = expenseFactory.createExpenseComponent(item.expense);
+
             categoryGroup.add(singleExpenseLeaf);
         }
+
         Log.d("CompositeDemo", "--- Calculating Totals ---");
-        Log.d("CompositeDemo", "GRAND TOTAL (" + allExpensesGroup.getTitle() + "): $" + allExpensesGroup.getAmount());
+        Log.d("CompositeDemo", "GRAND TOTAL (" + allExpensesGroup.getTitle() + "): $" + String.format("%.2f", allExpensesGroup.getAmount()));
         Log.d("CompositeDemo", "------------------------------------------");
     }
 
     private void applyStrategyExample() {
         Log.d("StrategyPattern", "--- Demonstrating Strategy Pattern ---");
-        if(expenseList.isEmpty()) {
+        if (expenseList.isEmpty()) {
             Log.d("StrategyPattern", "No expenses to calculate.");
             return;
         }
 
         ExpenseCalculatorContext context = new ExpenseCalculatorContext();
-        List<Expense> expensesOnly = getExpenseList();
+        List<Expense> expensesOnly = new ArrayList<>();
+        for (ExpenseItem item : expenseList) {
+            expensesOnly.add(item.expense);
+        }
 
         context.setStrategy(new TotalExpenseStrategy());
-        double totalAll = context.executeStrategy(expensesOnly);
-        Log.d("StrategyPattern", "Total (All Expenses): $" + totalAll);
+        Log.d("StrategyPattern", "Total (All): $" + String.format("%.2f", context.executeStrategy(expensesOnly)));
 
         context.setStrategy(new CategoryExpenseStrategy("Food"));
-        double totalFood = context.executeStrategy(expensesOnly);
-        Log.d("StrategyPattern", "Total (Food): $" + totalFood);
+        Log.d("StrategyPattern", "Total (Food): $" + String.format("%.2f", context.executeStrategy(expensesOnly)));
 
         context.setStrategy(new DailyExpenseStrategy("12/08/2025")); // Example date
         double totalToday = context.executeStrategy(expensesOnly);
         Log.d("StrategyPattern", "Total for 12/08/2025: $" + totalToday);
         Log.d("StrategyPattern", "------------------------------------");
-    }
-
-    private List<Expense> getExpenseList() {
-        List<Expense> expenses = new ArrayList<>();
-        for (ExpenseItem item : expenseList) {
-            expenses.add(item.expense);
-        }
-        return expenses;
-    }
-    @Override
-    public void onExpensesUpdated(List<Expense> expenses) {
-        // Clear old views
-        expenseList.clear();
-        expenseListContainer.removeAllViews();
-        double currentTotal = 0.0;
-
-        // Rebuild the UI with the new list
-        for (Expense expense : expenses) {
-            // You might need to refactor addExpenseToUI slightly to handle IDs if they aren't in the Expense object
-            // Or fetch IDs alongside data in the Repository
-            addExpenseToUI(expense, "temp_id"); // Ideally, add ID to your Expense model
-            currentTotal += expense.getAmount();
-        }
-
-        tvTotal.setText(String.format("$%.2f", currentTotal));
-    }
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        // 4. Clean up
-        ExpenseRepository.getInstance().removeObserver(this);
     }
 }
