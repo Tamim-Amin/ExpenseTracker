@@ -2,6 +2,9 @@ package com.example.expensetracker.patterns;
 
 import android.util.Log;
 import com.example.expensetracker.MainActivity;
+
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,15 +48,33 @@ public class ExpenseAnalysisFacade {
      * It constructs the tree and returns the calculated grand total.
      */
     public void generateCompositeAnalysisLog(List<MainActivity.Expense> expenses) {
-        if (expenses.isEmpty()) return;
+        // --- ADAPTER PATTERN DEMO ---
+        // 1. Create the incompatible object from the external source
+        ExternalExpense externalExpense = new ExternalExpense(
+                "External Library Subscription",
+                "$15.99",
+                "Software",
+                new Date()
+        );
+
+        // 2. Create the adapter and wrap the external object
+        MainActivity.Expense adaptedExpense = new ExternalExpenseAdapter(externalExpense);
+
+        // 3. Add the adapted object to the list. The client code can now
+        //    treat it just like any other standard Expense object.
+        List<MainActivity.Expense> allExpenses = new ArrayList<>(expenses);
+        allExpenses.add(adaptedExpense);
+        // --- END ADAPTER DEMO ---
+
+        if (allExpenses.isEmpty()) return;
 
         Log.d("FacadePattern", "--- Generating Composite Analysis ---");
 
         ExpenseComponent allExpensesGroup = new ExpenseGroup("Total Expenses");
         Map<String, ExpenseGroup> categoryGroups = new HashMap<>();
 
-        // 2. Loop directly through the Expense objects
-        for (MainActivity.Expense expense : expenses) {
+        // Loop through the combined list of expenses
+        for (MainActivity.Expense expense : allExpenses) {
             String category = expense.getCategory();
 
             ExpenseGroup categoryGroup = categoryGroups.get(category);
@@ -63,12 +84,12 @@ public class ExpenseAnalysisFacade {
                 allExpensesGroup.add(categoryGroup);
             }
 
-            // 3. Create leaf directly from the expense object
             ExpenseComponent singleExpenseLeaf = new SingleExpense(expense);
             categoryGroup.add(singleExpenseLeaf);
         }
 
         double total = allExpensesGroup.getAmount();
         Log.d("FacadePattern", "Composite Calculated Total: $" + total);
+        Log.d("AdapterPattern", "Successfully processed adapted expense: " + adaptedExpense.getDescription());
     }
 }
