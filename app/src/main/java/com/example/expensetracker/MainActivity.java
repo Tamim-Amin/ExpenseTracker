@@ -34,6 +34,9 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.example.expensetracker.patterns.iterator.ExpenseIterator;
+import com.example.expensetracker.patterns.iterator.ExpenseListIterator;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -177,6 +180,8 @@ public class MainActivity extends AppCompatActivity implements ExpenseObserver {
                 double foodTotal = analysisFacade.calculateCategoryTotal(expensesOnly, "Food");
                 Log.d("FacadeDemo", "Food Total via Facade: " + foodTotal);
 
+                // --- ITERATOR PATTERN DEMONSTRATION ---
+                demonstrateIteratorPattern();
                 // -----------------------------
 
             } else {
@@ -346,7 +351,7 @@ public class MainActivity extends AppCompatActivity implements ExpenseObserver {
     /**
      * Helper class to hold a reference to an Expense and its corresponding View and ID.
      */
-    private static class ExpenseItem {
+    public static class ExpenseItem {
         public Expense expense;
         public View view;
         public String id;
@@ -468,5 +473,22 @@ public class MainActivity extends AppCompatActivity implements ExpenseObserver {
         super.onDestroy();
         // 4. Clean up
         ExpenseRepository.getInstance().removeObserver(this);
+    }
+    public ExpenseIterator createIterator() {
+        // Pass the list to be iterated to the new constructor
+        return new ExpenseListIterator(expenseList);
+    }
+    private void demonstrateIteratorPattern() {
+        Log.d("IteratorPattern", "--- Demonstrating External Iterator Pattern ---");
+        // Get the iterator using the updated factory method
+        ExpenseIterator iterator = createIterator();
+
+        // Use the iterator to traverse the list
+        while (iterator.hasNext()) {
+            ExpenseItem item = iterator.next();
+            // Perform an action on each item
+            Log.d("IteratorPattern", "Iterating over: " + item.expense.getDescription());
+        }
+        Log.d("IteratorPattern", "-----------------------------------------");
     }
 }
