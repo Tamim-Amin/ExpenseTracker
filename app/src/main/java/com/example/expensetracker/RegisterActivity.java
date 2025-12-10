@@ -140,25 +140,40 @@ public class RegisterActivity extends AppCompatActivity {
 
                                         if (dbTask.isSuccessful()) {
                                             Log.d(TAG, "FirebaseDatabase: User data saved successfully.");
-
-                                            // Clear all fields
-                                            clearFields();
-
-                                            // Show success message with better feedback
-                                            Toast.makeText(this, "Account created successfully! Welcome " + username + "!", Toast.LENGTH_LONG).show();
-
-                                            // Go to login layout
-                                            Intent intent = new Intent(this, LoginActivity.class);
-                                            intent.putExtra("registration_success", true);
-                                            intent.putExtra("user_email", email);
-                                            startActivity(intent);
-                                            finish();
                                         } else {
-                                            // Log the database error
+                                            // Log the database error but don't block navigation
                                             Log.e(TAG, "FirebaseDatabase: Failed to save user data.", dbTask.getException());
-                                            String dbError = dbTask.getException() != null ? dbTask.getException().getMessage() : "Unknown error";
-                                            Toast.makeText(this, "Failed to save user data: " + dbError, Toast.LENGTH_LONG).show();
                                         }
+
+                                        // Clear all fields
+                                        clearFields();
+
+                                        // Show success message with better feedback
+                                        Toast.makeText(this, "Account created successfully! Welcome " + username + "!", Toast.LENGTH_LONG).show();
+
+                                        // Go to login layout - navigate regardless of database save result
+                                        // since the authentication was successful
+                                        Intent intent = new Intent(RegisterActivity.this, LoginActivity.class);
+                                        intent.putExtra("registration_success", true);
+                                        intent.putExtra("user_email", email);
+                                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                        startActivity(intent);
+                                        finish();
+                                    })
+                                    .addOnFailureListener(e -> {
+                                        // Handle failure case - still navigate to login since auth succeeded
+                                        progressDialog.dismiss();
+                                        Log.e(TAG, "FirebaseDatabase: Failed to save user data.", e);
+
+                                        clearFields();
+                                        Toast.makeText(this, "Account created successfully!", Toast.LENGTH_LONG).show();
+
+                                        Intent intent = new Intent(RegisterActivity.this, LoginActivity.class);
+                                        intent.putExtra("registration_success", true);
+                                        intent.putExtra("user_email", email);
+                                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                        startActivity(intent);
+                                        finish();
                                     });
                         }
                     } else {
