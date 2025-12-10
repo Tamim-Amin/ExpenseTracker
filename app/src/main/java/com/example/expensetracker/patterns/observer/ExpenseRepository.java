@@ -13,12 +13,10 @@ import java.util.List;
 public class ExpenseRepository {
     private static ExpenseRepository instance;
     private final List<ExpenseObserver> observers = new ArrayList<>();
-    private final DatabaseReference databaseReference;
+    private DatabaseReference databaseReference;
 
     private ExpenseRepository() {
-        // Use your existing Singleton for Firebase
-        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        databaseReference = FirebaseManager.getInstance().getDatabase().getReference("expenses").child(userId);
+        // Don't initialize databaseReference here - user may not be logged in yet
     }
 
     public static synchronized ExpenseRepository getInstance() {
@@ -26,6 +24,22 @@ public class ExpenseRepository {
             instance = new ExpenseRepository();
         }
         return instance;
+    }
+
+    // Initialize the database reference when we know user is logged in
+    private DatabaseReference getDatabaseReference() {
+        if (databaseReference == null) {
+            if (FirebaseAuth.getInstance().getCurrentUser() != null) {
+                String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+                databaseReference = FirebaseManager.getInstance().getDatabase().getReference("expenses").child(userId);
+            }
+        }
+        return databaseReference;
+    }
+
+    // Reset the instance when user logs out (call this from logout)
+    public static synchronized void resetInstance() {
+        instance = null;
     }
 
     // --- Observer Management Methods ---
@@ -45,7 +59,12 @@ public class ExpenseRepository {
 
     // --- Data Methods ---
     public void loadExpenses() {
-        databaseReference.get().addOnCompleteListener(task -> {
+        DatabaseReference dbRef = getDatabaseReference();
+        if (dbRef == null) {
+            // User not logged in, nothing to load
+            return;
+        }
+        dbRef.get().addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
                 List<MainActivity.Expense> expenseList = new ArrayList<>();
                 for (DataSnapshot snapshot : task.getResult().getChildren()) {

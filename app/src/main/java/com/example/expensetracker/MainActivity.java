@@ -61,12 +61,14 @@ public class MainActivity extends AppCompatActivity implements ExpenseObserver {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // 2. Register this activity as an observer
-        ExpenseRepository.getInstance().addObserver(this);
-        // Trigger the load
-        ExpenseRepository.getInstance().loadExpenses();
         // Initialize the Facade
         analysisFacade = new ExpenseAnalysisFacade();
+
+        setContentView(R.layout.activity_main);
+
+        tvWelcome = findViewById(R.id.tv_welcome);
+        tvTotal = findViewById(R.id.tv_total);
+        expenseListContainer = findViewById(R.id.expense_list_container);
 
 
         mAuth = FirebaseAuth.getInstance();
@@ -80,11 +82,7 @@ public class MainActivity extends AppCompatActivity implements ExpenseObserver {
         String userId = currentUser.getUid();
         expenseDbRef = FirebaseDatabase.getInstance().getReference("expenses").child(userId);
 
-        setContentView(R.layout.activity_main);
 
-        tvWelcome = findViewById(R.id.tv_welcome);
-        tvTotal = findViewById(R.id.tv_total);
-        expenseListContainer = findViewById(R.id.expense_list_container);
 
         String userName = getUserDisplayName(currentUser);
         tvWelcome.setText("Welcome, " + userName);
@@ -96,6 +94,11 @@ public class MainActivity extends AppCompatActivity implements ExpenseObserver {
 
         TextView tvSettings = findViewById(R.id.tv_settings);
         tvSettings.setOnClickListener(this::showSettingsMenu);
+
+        // 2. Register this activity as an observer
+        ExpenseRepository.getInstance().addObserver(this);
+        // Trigger the load
+        ExpenseRepository.getInstance().loadExpenses();
 
         loadUserExpensesFromFirebase();
     }
@@ -465,7 +468,17 @@ public class MainActivity extends AppCompatActivity implements ExpenseObserver {
         }
 
         tvTotal.setText(String.format("$%.2f", currentTotal));
+        // This method is called by the Observer.
+        // It's a good place for real-time updates that don't require a full UI rebuild.
+        Log.d("Observer", "Expense data has been updated in the repository.");
+
+        // For now, we can simply have it call the main Firebase load to ensure consistency.
+        // Or, you can build a more lightweight update logic here.
+        loadUserExpensesFromFirebase();
+
+        Toast.makeText(this, "Expenses updated via Observer!", Toast.LENGTH_SHORT).show();
     }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
