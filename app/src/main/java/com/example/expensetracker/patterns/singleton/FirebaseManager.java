@@ -1,5 +1,6 @@
 //SingleTon
-package com.example.expensetracker.patterns;
+//Tamim Amin
+package com.example.expensetracker.patterns.singleton;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.FirebaseDatabase;

@@ -1,7 +1,18 @@
-package com.example.expensetracker.patterns;
+//Facade Pattern
+//Tamim Amin
+package com.example.expensetracker.patterns.facade;
 
 import android.util.Log;
 import com.example.expensetracker.MainActivity;
+import com.example.expensetracker.patterns.strategy.CategoryExpenseStrategy;
+import com.example.expensetracker.patterns.strategy.DailyExpenseStrategy;
+import com.example.expensetracker.patterns.strategy.ExpenseCalculatorContext;
+import com.example.expensetracker.patterns.composite.ExpenseComponent;
+import com.example.expensetracker.patterns.composite.ExpenseGroup;
+import com.example.expensetracker.patterns.composite.SingleExpense;
+import com.example.expensetracker.patterns.strategy.TotalExpenseStrategy;
+import com.example.expensetracker.patterns.adapter.ExternalExpense;
+import com.example.expensetracker.patterns.adapter.ExternalExpenseAdapter;
 
 import java.util.ArrayList;
 import java.util.Date;

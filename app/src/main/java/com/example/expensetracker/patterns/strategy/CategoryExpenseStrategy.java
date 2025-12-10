@@ -1,21 +1,21 @@
-package com.example.expensetracker.patterns;
+package com.example.expensetracker.patterns.strategy;
 
 import com.example.expensetracker.MainActivity;
 
 import java.util.List;
 
-public class DailyExpenseStrategy implements ExpenseCalculationStrategy {
-    private String date; // Format: YYYY-MM-DD
+public class CategoryExpenseStrategy implements ExpenseCalculationStrategy {
+    private String category;
 
-    public DailyExpenseStrategy(String date) {
-        this.date = date;
+    public CategoryExpenseStrategy(String category) {
+        this.category = category;
     }
 
     @Override
     public double calculate(List<MainActivity.Expense> expenses) {
         double total = 0;
         for (MainActivity.Expense expense : expenses) {
-            if (expense.getDate().equals(date)) {
+            if (expense.getCategory().equalsIgnoreCase(category)) {
                 total += expense.getAmount();
             }
         }

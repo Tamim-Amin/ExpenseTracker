@@ -1,4 +1,6 @@
-package com.example.expensetracker.patterns;
+//Adaptee - incompatible external object
+//Tamim Amin
+package com.example.expensetracker.patterns.adapter;
 
 import java.util.Date;
 
@@ -6,7 +8,6 @@ import java.util.Date;
  * ADAPTER PATTERN:
  * The "Adaptee" class. This represents an incompatible object from an
  * external source that our system needs to integrate with.
- *
  * Note the differences from MainActivity.Expense:
  * - Amount is a String with a currency symbol.
  * - Date is a java.util.Date object.

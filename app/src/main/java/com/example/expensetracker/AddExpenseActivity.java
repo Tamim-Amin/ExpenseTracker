@@ -16,7 +16,7 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.expensetracker.patterns.ExpenseMemento; // Import the Memento class
+import com.example.expensetracker.patterns.memento.ExpenseMemento; // Import the Memento class
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;

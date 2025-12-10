@@ -1,6 +1,7 @@
-package com.example.expensetracker.patterns;
+package com.example.expensetracker.patterns.composite;
 
 import com.example.expensetracker.MainActivity;
+
 public class SingleExpense implements ExpenseComponent {
 
     // Holds the original data object from MainActivity

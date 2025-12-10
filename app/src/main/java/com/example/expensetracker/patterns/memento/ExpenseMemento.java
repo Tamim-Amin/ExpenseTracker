@@ -1,4 +1,4 @@
-package com.example.expensetracker.patterns;
+package com.example.expensetracker.patterns.memento;
 
 import com.example.expensetracker.MainActivity;
 

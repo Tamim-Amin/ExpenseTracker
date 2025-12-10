@@ -1,4 +1,4 @@
-package com.example.expensetracker.patterns;
+package com.example.expensetracker.patterns.strategy;
 
 import com.example.expensetracker.MainActivity;
 import java.util.List;

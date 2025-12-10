@@ -12,7 +12,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.expensetracker.patterns.FirebaseManager; // ✅ Added import for Singleton
+import com.example.expensetracker.patterns.singleton.FirebaseManager; // ✅ Added import for Singleton
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 

@@ -1,4 +1,5 @@
-package com.example.expensetracker.patterns;
+//Adapter
+package com.example.expensetracker.patterns.adapter;
 
 import com.example.expensetracker.MainActivity;
 

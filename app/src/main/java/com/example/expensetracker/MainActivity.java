@@ -15,20 +15,19 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 // imports from your project
-import com.example.expensetracker.patterns.CategoryExpenseStrategy;
+import com.example.expensetracker.patterns.strategy.CategoryExpenseStrategy;
 // __FACTORY PATTERN START__: Import the factory classes.
-import com.example.expensetracker.patterns.ConcreteExpenseFactory;
-import com.example.expensetracker.patterns.ExpenseComponentFactory;
+import com.example.expensetracker.patterns.factory.ConcreteExpenseFactory;
+import com.example.expensetracker.patterns.factory.ExpenseComponentFactory;
 // __FACTORY PATTERN END__
-import com.example.expensetracker.patterns.DailyExpenseStrategy;
-import com.example.expensetracker.patterns.ExpenseAnalysisFacade;
-import com.example.expensetracker.patterns.ExpenseCalculatorContext;
-import com.example.expensetracker.patterns.ExpenseComponent;
-import com.example.expensetracker.patterns.ExpenseGroup;
-import com.example.expensetracker.patterns.ExpenseObserver;
-import com.example.expensetracker.patterns.ExpenseRepository;
-import com.example.expensetracker.patterns.SingleExpense;
-import com.example.expensetracker.patterns.TotalExpenseStrategy;
+import com.example.expensetracker.patterns.strategy.DailyExpenseStrategy;
+import com.example.expensetracker.patterns.facade.ExpenseAnalysisFacade;
+import com.example.expensetracker.patterns.strategy.ExpenseCalculatorContext;
+import com.example.expensetracker.patterns.composite.ExpenseComponent;
+import com.example.expensetracker.patterns.composite.ExpenseGroup;
+import com.example.expensetracker.patterns.observer.ExpenseObserver;
+import com.example.expensetracker.patterns.observer.ExpenseRepository;
+import com.example.expensetracker.patterns.strategy.TotalExpenseStrategy;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
@@ -36,7 +35,6 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.example.expensetracker.patterns.iterator.ExpenseIterator;
 import com.example.expensetracker.patterns.iterator.ExpenseListIterator;
-import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.HashMap;

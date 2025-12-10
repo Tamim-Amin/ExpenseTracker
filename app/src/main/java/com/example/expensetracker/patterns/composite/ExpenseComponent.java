@@ -1,4 +1,4 @@
-package com.example.expensetracker.patterns;
+package com.example.expensetracker.patterns.composite;
 
 import java.util.Collections;
 import java.util.List;
