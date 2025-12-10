@@ -183,8 +183,10 @@ The project uses JUnit 5 and Mockito for testing.
 
 ## 👥 Authors
 
-- **Fawzia Tahia ** - [GitHub](https://github.com/Fawziatahia)
-- **Tamim Amin** - [GitHub](https://github.com/Tamim-Amin)
+- **Fawzia Tahia** – [GitHub](https://github.com/Fawziatahia)
+- **Tamim Amin** – [GitHub](https://github.com/Tamim-Amin)
+- **Sadiah Rahman** – [GitHub](https://github.com/Sadiah-Rahman)
+
 
 
 ## 📄 License
