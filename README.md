@@ -4,119 +4,84 @@ A modern Android expense tracking application built with **Java** and **Firebase
 
 ## 📱 Features
 
-- **User Authentication** - Secure login and registration with Firebase Auth
-- **Add Expenses** - Track expenses with description, amount, category, and date
-- **Edit Expenses** - Modify existing expenses with undo capability
-- **Delete Expenses** - Remove unwanted expense entries
-- **View Totals** - See total expenses, daily expenses, and category breakdowns
-- **Real-time Sync** - Data persisted to Firebase Realtime Database
-- **Expense Analysis** - Calculate and analyze expenses using various strategies
+- **User Authentication** – Secure login and registration with Firebase Auth  
+- **Add Expenses** – Track expenses with description, amount, category, and date  
+- **Edit Expenses** – Modify existing expenses with undo capability  
+- **Delete Expenses** – Remove unwanted expense entries  
+- **View Totals** – See total expenses, daily expenses, and category breakdowns  
+- **Real-time Sync** – Data persisted to Firebase Realtime Database  
+- **Expense Analysis** – Calculate and analyze expenses using various strategies  
 
 ## 🛠️ Tech Stack
 
-- **Language:** Java
-- **Platform:** Android (Min SDK 24, Target SDK 36)
-- **Backend:** Firebase Authentication & Realtime Database
-- **Build Tool:** Gradle (Kotlin DSL)
-- **Testing:** JUnit 5, Mockito
+- **Language:** Java  
+- **Platform:** Android (Min SDK 24, Target SDK 36)  
+- **Backend:** Firebase Authentication & Realtime Database  
+- **Build Tool:** Gradle (Kotlin DSL)  
+- **Testing:** JUnit 5, Mockito  
 
 ## 🎨 Design Patterns Implemented
 
-This project demonstrates the practical application of **10 design patterns**:
+This project demonstrates the practical application of **10 design patterns**, with contributors credited for their implementations.
 
-### 1. Singleton Pattern 🔒
-**Location:** `patterns/singleton/FirebaseManager.java`
+### 1. Singleton Pattern 🔒 *(Tamim)*
+**Location:** `patterns/singleton/FirebaseManager.java`  
+Ensures a single instance of Firebase services throughout the app.
 
-Ensures a single instance of Firebase services throughout the app, providing centralized access to `FirebaseAuth` and `FirebaseDatabase`.
+### 2. Observer Pattern 👁️ *(Sadia)*
+**Location:** `patterns/observer/`  
+Implements publish-subscribe mechanism for expense data updates.
 
-```java
-public static synchronized FirebaseManager getInstance() {
-    if (instance == null) {
-        instance = new FirebaseManager();
-    }
-    return instance;
-}
-```
-
-### 2. Observer Pattern 👁️
-**Location:** `patterns/observer/`
-- `ExpenseObserver.java` - Observer interface
-- `ExpenseRepository.java` - Subject (Observable)
-
-Implements publish-subscribe mechanism for expense data updates. `MainActivity` registers as an observer to receive notifications when expenses are loaded from Firebase.
-
-### 3. Strategy Pattern 🎲
-**Location:** `patterns/strategy/`
-- `ExpenseStrategy.java` - Strategy interface
-- `TotalExpenseStrategy.java` - Calculates total of all expenses
-- `CategoryExpenseStrategy.java` - Calculates expenses by category
-- `DailyExpenseStrategy.java` - Calculates expenses for a specific date
-- `ExpenseCalculatorContext.java` - Context class
-
+### 3. Strategy Pattern 🎲 *(Sadia)*
+**Location:** `patterns/strategy/`  
 Enables interchangeable expense calculation algorithms at runtime.
 
-### 4. Factory Pattern 🏭
-**Location:** `patterns/factory/`
-- `ExpenseComponentFactory.java` - Factory interface
-- `ConcreteExpenseFactory.java` - Concrete factory implementation
+### 4. Factory Pattern 🏭 *(Tahia)*
+**Location:** `patterns/factory/`  
+Encapsulates the creation of expense components, decoupling client code from class instantiation.
 
-Encapsulates the creation of expense components, decoupling client code from concrete class instantiation.
+### 5. Composite Pattern 🌳 *(Tahia)*
+**Location:** `patterns/composite/`  
+Represents expenses hierarchically using tree structures.
 
-### 5. Composite Pattern 🌳
-**Location:** `patterns/composite/`
-- `ExpenseComponent.java` - Component interface
-- `ExpenseLeaf.java` - Leaf node (single expense)
-- `ExpenseGroup.java` - Composite (group of expenses)
+### 6. Adapter Pattern 📦 *(Tamim)*
+**Location:** `patterns/adapter/`  
+Allows integration of external expense data in incompatible formats.
 
-Creates tree structures to represent expenses hierarchically, enabling uniform operations across individual expenses and groups.
+### 7. Facade Pattern 🏛️ *(Tamim)*
+**Location:** `patterns/facade/ExpenseAnalysisFacade.java`  
+Provides a simplified interface to complex subsystems.
 
-### 6. Adapter Pattern 📦
-**Location:** `patterns/adapter/`
-- `ExternalExpense.java` - Adaptee (incompatible interface)
-- `ExpenseAdapter.java` - Adapter
+### 8. Command Pattern 🎯 *(Tamim)*
+**Location:** `patterns/command/`  
+Encapsulates expense operations as commands, enabling flexible execution and undo support.
 
-Allows integration of external expense data with different formats into the existing system.
+### 9. Iterator Pattern 🔄 *(Sadia)*
+**Location:** `patterns/iterator/`  
+Provides a way to traverse expense collections without exposing internal structures.
 
-### 7. Facade Pattern 🏛️
-**Location:** `patterns/facade/ExpenseAnalysisFacade.java`
-
-Provides a simplified interface to complex subsystems (Strategy and Composite patterns), hiding implementation complexity from client code.
-
-### 8. Command Pattern 🎯
-**Location:** `patterns/command/`
-- `ExpenseCommand.java` - Command interface
-- `AddExpenseCommand.java` - Concrete command
-- `ExpenseInvoker.java` - Invoker
-- `ExpenseReceiver.java` - Receiver
-
-Encapsulates expense operations as command objects, enabling flexible execution and potential undo functionality.
-
-### 9. Iterator Pattern 🔄
-**Location:** `patterns/iterator/`
-- `ExpenseIterator.java` - Iterator interface
-- `ExpenseListIterator.java` - Concrete iterator
-
-Provides a way to traverse expense collections without exposing the underlying data structure.
-
-### 10. Memento Pattern 💾
-**Location:** `patterns/memento/ExpenseMemento.java`
-
-Enables undo functionality in expense editing by capturing and restoring an object's internal state.
+### 10. Memento Pattern 💾 *(Tahia)*
+**Location:** `patterns/memento/`  
+Enables undo functionality by capturing and restoring object state.
 
 ## 📊 Pattern Classification
 
-| Pattern | Type | Purpose |
-|---------|------|---------|
-| Singleton | Creational | Single Firebase instance |
-| Factory | Creational | Create expense components |
-| Adapter | Structural | Integrate external data |
-| Composite | Structural | Expense hierarchies |
-| Facade | Structural | Simplify subsystem access |
-| Observer | Behavioral | Data change notifications |
-| Strategy | Behavioral | Calculation algorithms |
-| Command | Behavioral | Encapsulate operations |
-| Iterator | Behavioral | Collection traversal |
-| Memento | Behavioral | Undo functionality |
+| Pattern   | Type        | Purpose                     | Contributor |
+|-----------|-------------|-----------------------------|-------------|
+| Singleton | Creational  | Single Firebase instance     | Tamim       |
+| Factory   | Creational  | Create expense components    | Tahia       |
+| Adapter   | Structural  | Integrate external data      | Tamim       |
+| Composite | Structural  | Expense hierarchies          | Tahia       |
+| Facade    | Structural  | Simplify subsystem access    | Tamim       |
+| Observer  | Behavioral  | Data change notifications    | Sadia       |
+| Strategy  | Behavioral  | Calculation algorithms       | Sadia       |
+| Command   | Behavioral  | Encapsulate operations       | Tamim       |
+| Iterator  | Behavioral  | Collection traversal         | Sadia       |
+| Memento   | Behavioral  | Undo functionality           | Tahia       |
+
+## 📁 Project Structure
+
+
 
 ## 📁 Project Structure
 
