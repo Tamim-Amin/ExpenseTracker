@@ -81,10 +81,6 @@ Enables undo functionality by capturing and restoring object state.
 
 ## 📁 Project Structure
 
-
-
-## 📁 Project Structure
-
 ```
 app/src/main/java/com/example/expensetracker/
 ├── MainActivity.java          # Main dashboard
